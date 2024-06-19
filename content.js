@@ -1,15 +1,12 @@
 // Function to load input field data
 function loadInputData() {
   const formId = generateFormId();
-  
 
   if (!formId) {
-    
     return;
   }
 
   chrome.storage.local.get(formId, function (result) {
-    
     const inputData = result[formId];
     if (inputData && Object.keys(inputData).length > 0) {
       Object.keys(inputData).forEach(function (selectorPath) {
@@ -17,7 +14,6 @@ function loadInputData() {
         try {
           const element = document.querySelector(selectorPath);
           if (element) {
-            
             if (element.tagName === "SELECT") {
               selectOption(element, value);
             } else if (
@@ -27,21 +23,18 @@ function loadInputData() {
               if (element.checked !== value) {
                 element.click(); // Use click to simulate user interaction
               }
-            } else if (element.type === "file") {
-              
-            } else {
+            } else if (element.type !== "file") {
               simulateTyping(element, value);
             }
           } else {
-            
+            console.error(`Element not found for selector: ${selectorPath}`);
           }
         } catch (error) {
-          
+          console.error(`Error processing element: ${error}`);
         }
       });
-      
     } else {
-      
+      console.log("No input data found for this form.");
     }
   });
 }
@@ -52,7 +45,6 @@ function selectOption(selectElement, value) {
     if (option.value === value) {
       option.selected = true;
       selectElement.dispatchEvent(new Event("change")); // Trigger change event
-      
     }
   });
 }
@@ -67,10 +59,8 @@ document.addEventListener("input", function (event) {
   ) {
     const selectorPath = generateSelectorPath(target);
     const formId = generateFormId();
-    
 
     if (!formId) {
-      
       return;
     }
 
@@ -82,14 +72,17 @@ document.addEventListener("input", function (event) {
     } else {
       fieldValue = target.value;
     }
-    
 
     // Save data to storage
     chrome.storage.local.get(formId, function (result) {
       const inputData = result[formId] || {};
       inputData[selectorPath] = fieldValue;
       chrome.storage.local.set({ [formId]: inputData }, function () {
-        
+        if (chrome.runtime.lastError) {
+          console.error("Error saving form data:", chrome.runtime.lastError);
+        } else {
+          console.log("Form data saved successfully.");
+        }
       });
     });
   }
@@ -146,7 +139,6 @@ function simulateTyping(element, text) {
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "loadInputData") {
-    
     loadInputData();
     sendResponse({ status: "success" }); // Make sure to send a response if needed
   }
@@ -172,7 +164,13 @@ function saveInputData() {
   });
 
   const formId = generateFormId(); // Use URL path as form identifier
+  console.log("formData", formData);
   chrome.storage.local.set({ [formId]: formData }, () => {
-    
+    if (chrome.runtime.lastError) {
+      console.error(
+        "Error saving form data on unload:",
+        chrome.runtime.lastError
+      );
+    }
   });
 }
